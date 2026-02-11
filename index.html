@@ -1,0 +1,1839 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Read Along — Audiobook Reader</title>
+  <meta name="description"
+    content="A browser-based audiobook reader that syncs MP3 audio with SRT subtitles for a read-along experience.">
+  <link rel="icon"
+    href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📖</text></svg>">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Merriweather:wght@300;400;700&family=Roboto+Slab:wght@300;400;700&display=swap');
+
+    /* ═══════════════════════════════════════════════
+   CSS CUSTOM PROPERTIES
+   ═══════════════════════════════════════════════ */
+    :root {
+      --bg-primary: #f8f7f4;
+      --bg-secondary: #ffffff;
+      --bg-tertiary: #f0eee9;
+      --bg-glass: rgba(255, 255, 255, 0.9);
+      --text-primary: #2c2c2c;
+      --text-secondary: #6b6b6b;
+      --text-muted: #a0a0a0;
+      --accent: #5b4fc4;
+      --accent-glow: rgba(91, 79, 196, 0.2);
+      --accent-hover: #6d62d6;
+      --highlight-bg: rgba(255, 255, 0, 0.45);
+      --highlight-border: rgba(200, 200, 0, 0.7);
+      --danger: #e53e3e;
+      --danger-hover: #c53030;
+      --success: #38a169;
+      --border: rgba(0, 0, 0, 0.08);
+      --shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+      --radius: 12px;
+      --radius-sm: 8px;
+      --font-ui: 'Inter', system-ui, -apple-system, sans-serif;
+      --font-reader: 'Inter', system-ui, sans-serif;
+      --reader-font-size: 20px;
+      --reader-line-height: 1.8;
+      --reader-margin: 60px;
+      --transition: 0.2s ease;
+    }
+
+    /* ═══════════════════════════════════════════════
+   RESET & BASE
+   ═══════════════════════════════════════════════ */
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html,
+    body {
+      height: 100%;
+      overflow: hidden;
+      font-family: var(--font-ui);
+      background: var(--bg-primary);
+      color: var(--text-primary);
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ═══════════════════════════════════════════════
+   SCROLLBAR UTILITY (for panels only)
+   ═══════════════════════════════════════════════ */
+    .scrollable::-webkit-scrollbar {
+      width: 5px;
+    }
+
+    .scrollable::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .scrollable::-webkit-scrollbar-thumb {
+      background: var(--text-muted);
+      border-radius: 4px;
+    }
+
+    /* ═══════════════════════════════════════════════
+   TOP BAR
+   ═══════════════════════════════════════════════ */
+    #topBar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 20px;
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border);
+      z-index: 100;
+      flex-shrink: 0;
+    }
+
+    #topBar .logo {
+      font-weight: 700;
+      font-size: 16px;
+      letter-spacing: 1px;
+      background: linear-gradient(135deg, var(--accent), #a78bfa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      white-space: nowrap;
+    }
+
+    #topBar .divider {
+      width: 1px;
+      height: 24px;
+      background: var(--border);
+      flex-shrink: 0;
+    }
+
+    /* Library selector */
+    #librarySelect {
+      flex: 1;
+      max-width: 320px;
+      padding: 8px 12px;
+      border-radius: var(--radius-sm);
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+      border: 1px solid var(--border);
+      font-size: 13px;
+      font-family: var(--font-ui);
+      cursor: pointer;
+      outline: none;
+      transition: border var(--transition);
+    }
+
+    #librarySelect:focus {
+      border-color: var(--accent);
+    }
+
+    .topBtn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 14px;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      font-family: var(--font-ui);
+      cursor: pointer;
+      transition: all var(--transition);
+      white-space: nowrap;
+    }
+
+    #addBtn {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    #addBtn:hover {
+      background: var(--accent-hover);
+    }
+
+    #deleteBtn {
+      background: transparent;
+      color: var(--danger);
+      border: 1px solid rgba(229, 62, 62, 0.35);
+    }
+
+    #deleteBtn:hover {
+      background: rgba(229, 62, 62, 0.08);
+    }
+
+    #settingsBtn {
+      background: transparent;
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+    }
+
+    #settingsBtn:hover {
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+    }
+
+    /* ═══════════════════════════════════════════════
+   UPLOAD MODAL
+   ═══════════════════════════════════════════════ */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.3);
+      z-index: 500;
+      justify-content: center;
+      align-items: center;
+      backdrop-filter: blur(4px);
+    }
+
+    .modal-overlay.active {
+      display: flex;
+    }
+
+    .modal {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 32px;
+      width: 440px;
+      max-width: 90vw;
+      box-shadow: var(--shadow);
+    }
+
+    .modal h2 {
+      font-size: 20px;
+      font-weight: 600;
+      margin-bottom: 24px;
+      background: linear-gradient(135deg, var(--accent), #a78bfa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .modal label {
+      display: block;
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-bottom: 6px;
+      margin-top: 16px;
+      font-weight: 500;
+    }
+
+    .modal label:first-of-type {
+      margin-top: 0;
+    }
+
+    .modal input[type="text"],
+    .modal input[type="file"] {
+      width: 100%;
+      padding: 10px 14px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-primary);
+      font-size: 14px;
+      font-family: var(--font-ui);
+      outline: none;
+      transition: border var(--transition);
+    }
+
+    .modal input:focus {
+      border-color: var(--accent);
+    }
+
+    .modal input[type="file"] {
+      cursor: pointer;
+    }
+
+    .modal input[type="file"]::file-selector-button {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      padding: 6px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+      font-family: var(--font-ui);
+      margin-right: 10px;
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 28px;
+    }
+
+    .btn-primary {
+      padding: 10px 24px;
+      border: none;
+      border-radius: var(--radius-sm);
+      background: var(--accent);
+      color: #fff;
+      font-size: 14px;
+      font-family: var(--font-ui);
+      cursor: pointer;
+      font-weight: 500;
+      transition: background var(--transition);
+    }
+
+    .btn-primary:hover {
+      background: var(--accent-hover);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn-ghost {
+      padding: 10px 24px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: transparent;
+      color: var(--text-secondary);
+      font-size: 14px;
+      font-family: var(--font-ui);
+      cursor: pointer;
+      transition: all var(--transition);
+    }
+
+    .btn-ghost:hover {
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+    }
+
+    /* ═══════════════════════════════════════════════
+   READER AREA
+   ═══════════════════════════════════════════════ */
+    #readerArea {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: stretch;
+    }
+
+    #pageContainer {
+      width: 100%;
+      height: 100%;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      padding: var(--reader-margin);
+      padding-top: 32px;
+      padding-bottom: 90px;
+    }
+
+    #pageContent {
+      flex: 1;
+      overflow: hidden;
+      font-family: var(--font-reader);
+      font-size: var(--reader-font-size);
+      line-height: var(--reader-line-height);
+      color: var(--text-primary);
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+    }
+
+    #pageContent .srt-block {
+      margin-bottom: 0.4em;
+      padding: 4px 8px;
+      border-radius: 6px;
+      border-left: 3px solid transparent;
+      transition: background 0.3s, border-color 0.3s;
+    }
+
+    #pageContent .srt-block.active {
+      background: var(--highlight-bg);
+      border-left-color: var(--highlight-border);
+      box-shadow: none;
+    }
+
+    /* Page nav arrows */
+    .page-nav {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 15%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      z-index: 10;
+      color: var(--text-muted);
+      font-size: 28px;
+      opacity: 0;
+      transition: opacity 0.3s;
+      user-select: none;
+    }
+
+    .page-nav:hover {
+      opacity: 1;
+    }
+
+    .page-nav.left {
+      left: 0;
+    }
+
+    .page-nav.right {
+      right: 0;
+    }
+
+    /* Page info footer */
+    #pageInfo {
+      position: absolute;
+      bottom: 56px;
+      left: 0;
+      right: 0;
+      text-align: center;
+      font-size: 12px;
+      color: var(--text-muted);
+      pointer-events: none;
+      z-index: 5;
+    }
+
+    /* Empty state */
+    #emptyState {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      text-align: center;
+      color: var(--text-muted);
+      gap: 16px;
+    }
+
+    #emptyState .icon {
+      font-size: 56px;
+      opacity: 0.4;
+    }
+
+    #emptyState .msg {
+      font-size: 16px;
+    }
+
+    #emptyState .hint {
+      font-size: 13px;
+    }
+
+    /* ═══════════════════════════════════════════════
+   BOTTOM PLAYER BAR
+   ═══════════════════════════════════════════════ */
+    #playerBar {
+      display: none;
+      flex-shrink: 0;
+      background: var(--bg-secondary);
+      border-top: 1px solid var(--border);
+      padding: 10px 20px;
+      z-index: 100;
+    }
+
+    /* Progress bar at top of player */
+    #progressBarContainer {
+      width: 100%;
+      height: 4px;
+      background: var(--bg-tertiary);
+      border-radius: 2px;
+      margin-bottom: 10px;
+      cursor: pointer;
+      position: relative;
+    }
+
+    #progressBarFill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), #a78bfa);
+      border-radius: 2px;
+      width: 0%;
+      transition: width 0.1s linear;
+    }
+
+    #playerControls {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .playBtn {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: var(--accent);
+      border: none;
+      color: #fff;
+      font-size: 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background var(--transition);
+      flex-shrink: 0;
+    }
+
+    .playBtn:hover {
+      background: var(--accent-hover);
+    }
+
+    #seekBar {
+      flex: 1;
+      height: 4px;
+      -webkit-appearance: none;
+      appearance: none;
+      background: var(--bg-tertiary);
+      border-radius: 2px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    #seekBar::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px;
+      height: 14px;
+      background: var(--accent);
+      border-radius: 50%;
+      cursor: pointer;
+      border: 2px solid var(--bg-secondary);
+    }
+
+    #timeDisplay {
+      font-size: 12px;
+      color: var(--text-secondary);
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+      min-width: 100px;
+      text-align: center;
+    }
+
+    #progressPercent {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--accent);
+      min-width: 70px;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* ═══════════════════════════════════════════════
+   SETTINGS PANEL
+   ═══════════════════════════════════════════════ */
+    #settingsPanel {
+      display: none;
+      position: fixed;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      width: 340px;
+      background: var(--bg-secondary);
+      border-left: 1px solid var(--border);
+      box-shadow: -8px 0 32px rgba(0, 0, 0, 0.1);
+      z-index: 200;
+      overflow-y: auto;
+      padding: 28px 24px;
+      transition: transform 0.3s ease;
+    }
+
+    #settingsPanel.open {
+      display: block;
+    }
+
+    #settingsPanel h3 {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 24px;
+      color: var(--text-primary);
+    }
+
+    .setting-group {
+      margin-bottom: 24px;
+    }
+
+    .setting-group label {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+
+    .setting-group label span.val {
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .setting-group input[type="range"] {
+      width: 100%;
+      height: 4px;
+      -webkit-appearance: none;
+      appearance: none;
+      background: var(--bg-tertiary);
+      border-radius: 2px;
+      outline: none;
+    }
+
+    .setting-group input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px;
+      height: 16px;
+      background: var(--accent);
+      border-radius: 50%;
+      cursor: pointer;
+      border: 2px solid var(--bg-secondary);
+    }
+
+    .setting-group select {
+      width: 100%;
+      padding: 8px 12px;
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      font-family: var(--font-ui);
+      cursor: pointer;
+      outline: none;
+    }
+
+    /* Toggle switch */
+    .toggle-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .toggle-row:last-child {
+      border-bottom: none;
+    }
+
+    .toggle-label {
+      font-size: 13px;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    .toggle {
+      position: relative;
+      width: 44px;
+      height: 24px;
+      background: var(--bg-tertiary);
+      border-radius: 12px;
+      cursor: pointer;
+      transition: background 0.3s;
+      border: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .toggle.on {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+
+    .toggle::after {
+      content: '';
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 18px;
+      height: 18px;
+      background: #fff;
+      border-radius: 50%;
+      transition: transform 0.3s;
+    }
+
+    .toggle.on::after {
+      transform: translateX(20px);
+    }
+
+    /* Shortcut guide */
+    .shortcut-list {
+      list-style: none;
+      padding: 0;
+    }
+
+    .shortcut-list li {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 0;
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    .shortcut-list kbd {
+      background: var(--bg-tertiary);
+      padding: 3px 10px;
+      border-radius: 5px;
+      font-size: 12px;
+      font-family: var(--font-ui);
+      border: 1px solid var(--border);
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+
+    .close-settings {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 22px;
+      cursor: pointer;
+      transition: color var(--transition);
+    }
+
+    .close-settings:hover {
+      color: var(--text-primary);
+    }
+
+    /* Measure div (hidden) */
+    #measureDiv {
+      position: absolute;
+      top: -9999px;
+      left: -9999px;
+      visibility: hidden;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+    }
+
+    /* ═══════════════════════════════════════════════
+   ANIMATIONS
+   ═══════════════════════════════════════════════ */
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .fade-in {
+      animation: fadeIn 0.25s ease forwards;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- ═══════  TOP BAR  ═══════ -->
+  <div id="topBar">
+    <div class="logo">READ ALONG</div>
+    <div class="divider"></div>
+    <select id="librarySelect">
+      <option value="">— Select Audiobook —</option>
+    </select>
+    <button class="topBtn" id="addBtn" title="Add new audiobook">＋ Add</button>
+    <button class="topBtn" id="deleteBtn" title="Delete selected audiobook">✕ Delete</button>
+    <div style="flex:1;"></div>
+    <button class="topBtn" id="settingsBtn" title="Settings">⚙ Settings</button>
+  </div>
+
+  <!-- ═══════  UPLOAD MODAL  ═══════ -->
+  <div class="modal-overlay" id="uploadModal">
+    <div class="modal">
+      <h2>Add Audiobook</h2>
+      <label for="inputTitle">Title *</label>
+      <input type="text" id="inputTitle" placeholder="e.g. The Great Gatsby">
+      <label for="inputMp3">MP3 Audio File *</label>
+      <input type="file" id="inputMp3" accept=".mp3,audio/mpeg">
+      <label for="inputSrt">SRT Subtitle File *</label>
+      <input type="file" id="inputSrt" accept=".srt">
+      <div class="modal-actions">
+        <button class="btn-ghost" id="cancelUpload">Cancel</button>
+        <button class="btn-primary" id="saveUpload">Save Audiobook</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════  READER AREA  ═══════ -->
+  <div id="readerArea">
+    <div class="page-nav left" id="prevPage">‹</div>
+    <div id="pageContainer">
+      <div id="pageContent"></div>
+      <div id="emptyState">
+        <div class="icon">📖</div>
+        <div class="msg">No audiobook loaded</div>
+        <div class="hint">Click <strong>＋ Add</strong> to upload an MP3 + SRT pair</div>
+      </div>
+    </div>
+    <div class="page-nav right" id="nextPage">›</div>
+    <div id="pageInfo"></div>
+  </div>
+
+  <!-- ═══════  BOTTOM PLAYER BAR  ═══════ -->
+  <div id="playerBar">
+    <div id="progressBarContainer">
+      <div id="progressBarFill"></div>
+    </div>
+    <div id="playerControls">
+      <button class="playBtn" id="playPauseBtn" title="Play / Pause (Space)">▶</button>
+      <input type="range" id="seekBar" min="0" max="1000" value="0">
+      <span id="timeDisplay">0:00 / 0:00</span>
+      <span id="progressPercent">0.0%</span>
+    </div>
+  </div>
+
+  <!-- ═══════  SETTINGS PANEL  ═══════ -->
+  <div id="settingsPanel">
+    <button class="close-settings" id="closeSettings">✕</button>
+    <h3>⚙ Settings</h3>
+
+    <div class="setting-group">
+      <label>Font Size <span class="val" id="fontSizeVal">20px</span></label>
+      <input type="range" id="fontSizeSlider" min="14" max="40" value="20" step="1">
+    </div>
+
+    <div class="setting-group">
+      <label>Line Height <span class="val" id="lineHeightVal">1.8</span></label>
+      <input type="range" id="lineHeightSlider" min="1.2" max="3.0" value="1.8" step="0.1">
+    </div>
+
+    <div class="setting-group">
+      <label>Page Margin <span class="val" id="marginVal">60px</span></label>
+      <input type="range" id="marginSlider" min="20" max="160" value="60" step="10">
+    </div>
+
+    <div class="setting-group">
+      <label>Font Family</label>
+      <select id="fontFamilySelect">
+        <option value="'Inter', system-ui, sans-serif">Inter (Sans)</option>
+        <option value="'Merriweather', Georgia, serif">Merriweather (Serif)</option>
+        <option value="'Roboto Slab', serif">Roboto Slab</option>
+        <option value="Georgia, serif">Georgia</option>
+        <option value="system-ui, sans-serif">System Default</option>
+      </select>
+    </div>
+
+    <div class="setting-group">
+      <label>Highlight Color</label>
+      <select id="highlightColorSelect">
+        <option value="yellow">Yellow</option>
+        <option value="green">Green</option>
+        <option value="pink">Pink</option>
+        <option value="blue">Blue</option>
+        <option value="orange">Orange</option>
+      </select>
+    </div>
+
+    <h3 style="margin-top:32px;">Playback</h3>
+
+    <div class="toggle-row">
+      <span class="toggle-label">Pause after each sentence</span>
+      <div class="toggle" id="togglePauseAfter"></div>
+    </div>
+    <div class="toggle-row">
+      <span class="toggle-label">Auto-turn long sentences</span>
+      <div class="toggle on" id="toggleAutoTurnLong"></div>
+    </div>
+
+    <h3 style="margin-top:32px;">Keyboard Shortcuts</h3>
+    <ul class="shortcut-list">
+      <li><span>Previous sentence</span><kbd>A</kbd></li>
+      <li><span>Repeat sentence</span><kbd>S</kbd></li>
+      <li><span>Next sentence</span><kbd>D</kbd></li>
+      <li><span>Play / Pause</span><kbd>Space</kbd></li>
+      <li><span>Previous page</span><kbd>←</kbd></li>
+      <li><span>Next page</span><kbd>→</kbd></li>
+    </ul>
+  </div>
+
+  <!-- Hidden measure div for pagination -->
+  <div id="measureDiv"></div>
+
+  <!-- Audio element -->
+  <audio id="audioEl" preload="auto"></audio>
+
+  <!-- ═══════════════════════════════════════════════
+     JAVASCRIPT
+     ═══════════════════════════════════════════════ -->
+  <script>
+    (function () {
+      'use strict';
+
+      /* ─── DOM refs ─── */
+      const $ = id => document.getElementById(id);
+      const audioEl = $('audioEl');
+      const librarySelect = $('librarySelect');
+      const addBtn = $('addBtn');
+      const deleteBtn = $('deleteBtn');
+      const settingsBtn = $('settingsBtn');
+      const uploadModal = $('uploadModal');
+      const inputTitle = $('inputTitle');
+      const inputMp3 = $('inputMp3');
+      const inputSrt = $('inputSrt');
+      const cancelUpload = $('cancelUpload');
+      const saveUpload = $('saveUpload');
+      const pageContent = $('pageContent');
+      const emptyState = $('emptyState');
+      const pageInfo = $('pageInfo');
+      const prevPageBtn = $('prevPage');
+      const nextPageBtn = $('nextPage');
+      const playerBar = $('playerBar');
+      const playPauseBtn = $('playPauseBtn');
+      const seekBar = $('seekBar');
+      const timeDisplay = $('timeDisplay');
+      const progressPercent = $('progressPercent');
+      const progressBarFill = $('progressBarFill');
+      const progressBarContainer = $('progressBarContainer');
+      const settingsPanel = $('settingsPanel');
+      const closeSettings = $('closeSettings');
+      const fontSizeSlider = $('fontSizeSlider');
+      const lineHeightSlider = $('lineHeightSlider');
+      const marginSlider = $('marginSlider');
+      const fontFamilySelect = $('fontFamilySelect');
+      const highlightColorSelect = $('highlightColorSelect');
+      const fontSizeVal = $('fontSizeVal');
+      const lineHeightVal = $('lineHeightVal');
+      const marginVal = $('marginVal');
+      const togglePauseAfter = $('togglePauseAfter');
+      const toggleAutoTurnLong = $('toggleAutoTurnLong');
+      const measureDiv = $('measureDiv');
+
+      /* ─── State ─── */
+      let currentBookId = null;
+      let srtBlocks = [];   // { index, startTime, endTime, text }
+      let pages = [];   // [ [ {blockIdx, text, isPartial, partIdx, totalParts} ] ]
+      let currentPage = 0;
+      let lastHighlightedBlock = -1;
+      let pauseGuardTime = 0;   // timestamp for pause guard
+      let animFrameId = null;
+      let isSeeking = false;
+
+      /* Settings state */
+      let settings = {
+        fontSize: 20,
+        lineHeight: 1.8,
+        margin: 60,
+        fontFamily: "'Inter', system-ui, sans-serif",
+        pauseAfterSentence: false,
+        autoTurnLong: true,
+        highlightColor: 'yellow'
+      };
+
+      const HIGHLIGHT_COLORS = {
+        yellow: { bg: 'rgba(255, 255, 0, 0.45)', border: 'rgba(200, 200, 0, 0.7)' },
+        green: { bg: 'rgba(0, 255, 100, 0.35)', border: 'rgba(0, 200, 80, 0.6)' },
+        pink: { bg: 'rgba(255, 105, 180, 0.35)', border: 'rgba(255, 80, 160, 0.6)' },
+        blue: { bg: 'rgba(0, 180, 255, 0.35)', border: 'rgba(0, 150, 220, 0.6)' },
+        orange: { bg: 'rgba(255, 165, 0, 0.4)', border: 'rgba(220, 140, 0, 0.65)' }
+      };
+
+      /* ═══════════════════════════════════════════════
+         SRT PARSER
+         ═══════════════════════════════════════════════ */
+      function parseSRT(text) {
+        const blocks = [];
+        // Normalize line endings
+        const raw = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim();
+        // Split by double newline (blank line between blocks)
+        const parts = raw.split(/\n\n+/);
+
+        for (const part of parts) {
+          const lines = part.trim().split('\n');
+          if (lines.length < 3) continue;
+
+          const index = parseInt(lines[0].trim(), 10);
+          if (isNaN(index)) continue;
+
+          const timeLine = lines[1].trim();
+          const re = /(\d{1,2}):(\d{2}):(\d{2})[,.](\d{3})\s*-->\s* (\d{ 1, 2 }): (\d{ 2 }): (\d{ 2 })[,.](\d{ 3}) /;
+          const timeMatch = timeLine.match(re);
+          if (!timeMatch) continue;
+
+          const startTime = (+timeMatch[1]) * 3600 + (+timeMatch[2]) * 60 +
+            (+timeMatch[3]) + (+timeMatch[4]) / 1000;
+          const endTime = (+timeMatch[5]) * 3600 + (+timeMatch[6]) * 60 +
+            (+timeMatch[7]) + (+timeMatch[8]) / 1000;
+
+          const textLines = lines.slice(2).join(' ').trim();
+
+          blocks.push({ index, startTime, endTime, text: textLines });
+        }
+
+        return blocks;
+      }
+
+      /* ═══════════════════════════════════════════════
+         INDEXEDDB STORAGE
+         ═══════════════════════════════════════════════ */
+      const DB_NAME = 'ReadAlongDB';
+      const DB_VERSION = 1;
+      const STORE_NAME = 'audiobooks';
+
+      function openDB() {
+        return new Promise((resolve, reject) => {
+          const req = indexedDB.open(DB_NAME, DB_VERSION);
+          req.onupgradeneeded = e => {
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains(STORE_NAME)) {
+              db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+            }
+          };
+          req.onsuccess = e => resolve(e.target.result);
+          req.onerror = e => reject(e.target.error);
+        });
+      }
+
+      async function idbPut(record) {
+        const db = await openDB();
+        return new Promise((resolve, reject) => {
+          const tx = db.transaction(STORE_NAME, 'readwrite');
+          tx.objectStore(STORE_NAME).put(record);
+          tx.oncomplete = () => resolve();
+          tx.onerror = e => reject(e.target.error);
+        });
+      }
+
+      async function idbGet(id) {
+        const db = await openDB();
+        return new Promise((resolve, reject) => {
+          const tx = db.transaction(STORE_NAME, 'readonly');
+          const req = tx.objectStore(STORE_NAME).get(id);
+          req.onsuccess = () => resolve(req.result);
+          req.onerror = e => reject(e.target.error);
+        });
+      }
+
+      async function idbDelete(id) {
+        const db = await openDB();
+        return new Promise((resolve, reject) => {
+          const tx = db.transaction(STORE_NAME, 'readwrite');
+          tx.objectStore(STORE_NAME).delete(id);
+          tx.oncomplete = () => resolve();
+          tx.onerror = e => reject(e.target.error);
+        });
+      }
+
+      /* ─── localStorage helpers ─── */
+      function getBookList() {
+        try { return JSON.parse(localStorage.getItem('ra_bookList')) || []; }
+        catch { return []; }
+      }
+      function setBookList(list) {
+        localStorage.setItem('ra_bookList', JSON.stringify(list));
+      }
+      function getBookMeta(id) {
+        try { return JSON.parse(localStorage.getItem('ra_book_' + id)) || {}; }
+        catch { return {}; }
+      }
+      function setBookMeta(id, meta) {
+        localStorage.setItem('ra_book_' + id, JSON.stringify(meta));
+      }
+      function removeBookMeta(id) {
+        localStorage.removeItem('ra_book_' + id);
+      }
+      function getGlobalSettings() {
+        try { return JSON.parse(localStorage.getItem('ra_globalSettings')) || {}; }
+        catch { return {}; }
+      }
+      function setGlobalSettings(s) {
+        localStorage.setItem('ra_globalSettings', JSON.stringify(s));
+      }
+
+      /* ═══════════════════════════════════════════════
+         LIBRARY MANAGEMENT
+         ═══════════════════════════════════════════════ */
+      function generateId() {
+        return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+      }
+
+      function refreshLibraryUI() {
+        const list = getBookList();
+        librarySelect.innerHTML = '<option value="">— Select Audiobook —</option>';
+        list.forEach(b => {
+          const opt = document.createElement('option');
+          opt.value = b.id; opt.textContent = b.title;
+          if (b.id === currentBookId) opt.selected = true;
+          librarySelect.appendChild(opt);
+        });
+      }
+
+      /* ═══════════════════════════════════════════════
+         UPLOAD FLOW
+         ═══════════════════════════════════════════════ */
+      addBtn.addEventListener('click', () => {
+        inputTitle.value = '';
+        inputMp3.value = '';
+        inputSrt.value = '';
+        uploadModal.classList.add('active');
+        inputTitle.focus();
+      });
+
+      // Auto-fill title from MP3 filename (still editable)
+      inputMp3.addEventListener('change', () => {
+        if (inputMp3.files[0] && !inputTitle.value.trim()) {
+          const name = inputMp3.files[0].name.replace(/\.[^.]+$/, '');
+          inputTitle.value = name;
+        }
+      });
+
+      cancelUpload.addEventListener('click', () => {
+        uploadModal.classList.remove('active');
+      });
+
+      uploadModal.addEventListener('click', e => {
+        if (e.target === uploadModal) uploadModal.classList.remove('active');
+      });
+
+      saveUpload.addEventListener('click', async () => {
+        const title = inputTitle.value.trim();
+        const mp3File = inputMp3.files[0];
+        const srtFile = inputSrt.files[0];
+
+        if (!title) return alert('Please enter a title.');
+        if (!mp3File) return alert('Please select an MP3 file.');
+        if (!srtFile) return alert('Please select an SRT file.');
+
+        saveUpload.disabled = true;
+        saveUpload.textContent = 'Saving…';
+
+        try {
+          const srtText = await srtFile.text();
+          const mp3Blob = mp3File;
+
+          const id = generateId();
+          await idbPut({ id, title, mp3Blob, srtText, createdAt: Date.now() });
+
+          const list = getBookList();
+          list.push({ id, title, createdAt: Date.now() });
+          setBookList(list);
+
+          // Initialize book meta with global settings
+          const gs = getGlobalSettings();
+          setBookMeta(id, {
+            lastTime: 0,
+            lastPageIndex: 0,
+            settings: {
+              fontSize: gs.fontSize || 20,
+              lineHeight: gs.lineHeight || 1.8,
+              margin: gs.margin || 60,
+              fontFamily: gs.fontFamily || "'Inter', system-ui, sans-serif",
+              pauseAfterSentence: false,
+              autoTurnLong: true
+            }
+          });
+
+          refreshLibraryUI();
+          uploadModal.classList.remove('active');
+
+          // Auto-select the new book
+          await loadBook(id);
+        } catch (err) {
+          console.error('Save error:', err);
+          alert('Failed to save audiobook: ' + err.message);
+        } finally {
+          saveUpload.disabled = false;
+          saveUpload.textContent = 'Save Audiobook';
+        }
+      });
+
+      /* ═══════════════════════════════════════════════
+         DELETE
+         ═══════════════════════════════════════════════ */
+      deleteBtn.addEventListener('click', async () => {
+        if (!currentBookId) return alert('No audiobook selected.');
+        const list = getBookList();
+        const book = list.find(b => b.id === currentBookId);
+        if (!book) return;
+
+        if (!confirm(`Delete "${book.title}"? This cannot be undone.`)) return;
+
+        await idbDelete(currentBookId);
+        removeBookMeta(currentBookId);
+        setBookList(list.filter(b => b.id !== currentBookId));
+
+        currentBookId = null;
+        srtBlocks = [];
+        pages = [];
+        currentPage = 0;
+        audioEl.pause();
+        audioEl.src = '';
+        showEmptyState();
+        refreshLibraryUI();
+      });
+
+      /* ═══════════════════════════════════════════════
+         LOAD BOOK
+         ═══════════════════════════════════════════════ */
+      librarySelect.addEventListener('change', async () => {
+        const id = librarySelect.value;
+        if (!id) return;
+        await loadBook(id);
+      });
+
+      async function loadBook(id) {
+        try {
+          const record = await idbGet(id);
+          if (!record) { alert('Audiobook not found in storage.'); return; }
+
+          currentBookId = id;
+          librarySelect.value = id;
+
+          // Parse SRT
+          srtBlocks = parseSRT(record.srtText);
+          if (srtBlocks.length === 0) {
+            alert('No valid SRT blocks found.');
+            return;
+          }
+
+          // Load meta (settings + last position)
+          const meta = getBookMeta(id);
+          if (meta.settings) {
+            settings = { ...settings, ...meta.settings };
+          }
+          applySettings();
+
+          // Create audio object URL
+          const blob = record.mp3Blob instanceof Blob ? record.mp3Blob : new Blob([record.mp3Blob]);
+          const url = URL.createObjectURL(blob);
+          audioEl.src = url;
+
+          // Wait for audio metadata
+          await new Promise((resolve, reject) => {
+            audioEl.addEventListener('loadedmetadata', resolve, { once: true });
+            audioEl.addEventListener('error', reject, { once: true });
+          });
+
+          // Restore last position
+          if (meta.lastTime && meta.lastTime > 0) {
+            audioEl.currentTime = meta.lastTime;
+          }
+
+          // Show player
+          playerBar.style.display = 'block';
+          emptyState.style.display = 'none';
+
+          // Paginate
+          paginateContent();
+
+          // Restore last page
+          if (meta.lastPageIndex && meta.lastPageIndex < pages.length) {
+            currentPage = meta.lastPageIndex;
+          } else {
+            // Find page by currentTime
+            currentPage = findPageForTime(audioEl.currentTime);
+          }
+          renderCurrentPage();
+
+          // Start sync loop
+          startSyncLoop();
+
+        } catch (err) {
+          console.error('Load error:', err);
+          alert('Failed to load audiobook: ' + err.message);
+        }
+      }
+
+      function showEmptyState() {
+        emptyState.style.display = 'flex';
+        pageContent.innerHTML = '';
+        playerBar.style.display = 'none';
+        pageInfo.textContent = '';
+      }
+
+      /* ═══════════════════════════════════════════════
+         PAGINATION ENGINE
+         ═══════════════════════════════════════════════ */
+      function paginateContent() {
+        pages = [];
+        if (srtBlocks.length === 0) return;
+
+        // Get available height for content
+        const container = $('pageContainer');
+        const containerHeight = container.clientHeight
+          - parseInt(getComputedStyle(container).paddingTop)
+          - parseInt(getComputedStyle(container).paddingBottom);
+
+        // Configure measure div to match reader styles
+        measureDiv.style.width = (container.clientWidth
+          - parseInt(getComputedStyle(container).paddingLeft)
+          - parseInt(getComputedStyle(container).paddingRight)) + 'px';
+        measureDiv.style.fontFamily = settings.fontFamily;
+        measureDiv.style.fontSize = settings.fontSize + 'px';
+        measureDiv.style.lineHeight = String(settings.lineHeight);
+        measureDiv.style.wordWrap = 'break-word';
+        measureDiv.style.overflowWrap = 'break-word';
+
+        let currentPageBlocks = [];
+        let currentHeight = 0;
+
+        for (let i = 0; i < srtBlocks.length; i++) {
+          const block = srtBlocks[i];
+
+          // Measure this block
+          const blockHeight = measureBlockHeight(block.text);
+
+          if (currentHeight + blockHeight <= containerHeight) {
+            // Fits in current page
+            currentPageBlocks.push({
+              blockIdx: i, text: block.text,
+              isPartial: false, partIdx: 0, totalParts: 1
+            });
+            currentHeight += blockHeight;
+          } else if (currentPageBlocks.length === 0) {
+            // Block alone is too big for one page → split it
+            const parts = splitBlockToFitPages(block.text, containerHeight);
+            for (let p = 0; p < parts.length; p++) {
+              pages.push([{
+                blockIdx: i, text: parts[p],
+                isPartial: parts.length > 1, partIdx: p, totalParts: parts.length
+              }]);
+            }
+            currentHeight = 0;
+            currentPageBlocks = [];
+          } else {
+            // Start new page with this block
+            pages.push([...currentPageBlocks]);
+            currentPageBlocks = [];
+            currentHeight = 0;
+            i--; // Re-process this block
+          }
+        }
+
+        // Push remaining blocks
+        if (currentPageBlocks.length > 0) {
+          pages.push([...currentPageBlocks]);
+        }
+      }
+
+      function measureBlockHeight(text) {
+        measureDiv.innerHTML = '';
+        const el = document.createElement('div');
+        el.className = 'srt-block';
+        el.style.marginBottom = '0.4em';
+        el.style.padding = '4px 8px';
+        el.style.borderLeft = '3px solid transparent';
+        el.textContent = text;
+        measureDiv.appendChild(el);
+        return el.offsetHeight;
+      }
+
+      function splitBlockToFitPages(text, maxHeight) {
+        const words = text.split(/\s+/);
+        const parts = [];
+        let startIdx = 0;
+
+        while (startIdx < words.length) {
+          // Binary search for how many words fit
+          let lo = 1, hi = words.length - startIdx, best = 1;
+
+          while (lo <= hi) {
+            const mid = Math.floor((lo + hi) / 2);
+            const testText = words.slice(startIdx, startIdx + mid).join(' ');
+            const h = measureBlockHeight(testText);
+
+            if (h <= maxHeight) {
+              best = mid;
+              lo = mid + 1;
+            } else {
+              hi = mid - 1;
+            }
+          }
+
+          // Ensure at least 1 word per page
+          if (best < 1) best = 1;
+
+          parts.push(words.slice(startIdx, startIdx + best).join(' '));
+          startIdx += best;
+        }
+
+        return parts;
+      }
+
+      /* ═══════════════════════════════════════════════
+         PAGE RENDERING
+         ═══════════════════════════════════════════════ */
+      function renderCurrentPage() {
+        if (pages.length === 0) {
+          pageContent.innerHTML = '';
+          pageInfo.textContent = '';
+          return;
+        }
+
+        if (currentPage < 0) currentPage = 0;
+        if (currentPage >= pages.length) currentPage = pages.length - 1;
+
+        const pg = pages[currentPage];
+        pageContent.innerHTML = '';
+
+        pg.forEach(item => {
+          const div = document.createElement('div');
+          div.className = 'srt-block';
+          div.dataset.blockIdx = item.blockIdx;
+          div.textContent = item.text;
+          pageContent.appendChild(div);
+        });
+
+        pageContent.classList.remove('fade-in');
+        void pageContent.offsetWidth; // Force reflow
+        pageContent.classList.add('fade-in');
+
+        pageInfo.textContent = `Page ${currentPage + 1} / ${pages.length}`;
+
+        // Update highlight
+        updateHighlight();
+        saveProgress();
+      }
+
+      function updateHighlight() {
+        const activeIdx = findActiveBlockIndex(audioEl.currentTime);
+        const blockEls = pageContent.querySelectorAll('.srt-block');
+        blockEls.forEach(el => {
+          const idx = parseInt(el.dataset.blockIdx, 10);
+          el.classList.toggle('active', idx === activeIdx);
+        });
+      }
+
+      /* ═══════════════════════════════════════════════
+         PAGE NAVIGATION
+         ═══════════════════════════════════════════════ */
+      function goToPage(n) {
+        if (n < 0 || n >= pages.length) return;
+        currentPage = n;
+        renderCurrentPage();
+      }
+
+      prevPageBtn.addEventListener('click', () => goToPage(currentPage - 1));
+      nextPageBtn.addEventListener('click', () => goToPage(currentPage + 1));
+
+      /* ═══════════════════════════════════════════════
+         READ-ALONG SYNC
+         ═══════════════════════════════════════════════ */
+      function findActiveBlockIndex(time) {
+        // Binary search for SRT block containing time
+        let lo = 0, hi = srtBlocks.length - 1, result = -1;
+
+        while (lo <= hi) {
+          const mid = Math.floor((lo + hi) / 2);
+          if (srtBlocks[mid].startTime <= time) {
+            result = mid;
+            lo = mid + 1;
+          } else {
+            hi = mid - 1;
+          }
+        }
+
+        // Check if result is valid (time should be before endTime)
+        if (result >= 0 && time <= srtBlocks[result].endTime) {
+          return result;
+        }
+
+        // If between blocks, return the one we just passed
+        if (result >= 0) return result;
+
+        return -1;
+      }
+
+      function findPageForBlock(blockIdx) {
+        for (let i = 0; i < pages.length; i++) {
+          for (const item of pages[i]) {
+            if (item.blockIdx === blockIdx) return i;
+          }
+        }
+        return 0;
+      }
+
+      function findPageForTime(time) {
+        const blockIdx = findActiveBlockIndex(time);
+        if (blockIdx < 0) return 0;
+        return findPageForBlockWithSubpage(blockIdx, time);
+      }
+
+      function findPageForBlockWithSubpage(blockIdx, time) {
+        // Find all pages containing this block
+        const blockPages = [];
+        for (let i = 0; i < pages.length; i++) {
+          for (const item of pages[i]) {
+            if (item.blockIdx === blockIdx) {
+              blockPages.push({ pageIdx: i, item });
+            }
+          }
+        }
+
+        if (blockPages.length === 0) return 0;
+        if (blockPages.length === 1) return blockPages[0].pageIdx;
+
+        // Multi-page block: compute sub-page based on time proportion
+        if (settings.autoTurnLong) {
+          const block = srtBlocks[blockIdx];
+          const duration = block.endTime - block.startTime;
+          if (duration <= 0) return blockPages[0].pageIdx;
+
+          const elapsed = time - block.startTime;
+          const proportion = Math.min(Math.max(elapsed / duration, 0), 0.999);
+          const subPageIdx = Math.floor(proportion * blockPages.length);
+          return blockPages[Math.min(subPageIdx, blockPages.length - 1)].pageIdx;
+        } else {
+          // Without auto-turn: just return the first page of this block
+          return blockPages[0].pageIdx;
+        }
+      }
+
+      function syncLoop() {
+        if (!audioEl.paused && !isSeeking) {
+          const time = audioEl.currentTime;
+          const blockIdx = findActiveBlockIndex(time);
+
+          if (blockIdx >= 0) {
+            const targetPage = findPageForBlockWithSubpage(blockIdx, time);
+
+            // Auto-navigate to the target page
+            if (targetPage !== currentPage) {
+              currentPage = targetPage;
+              renderCurrentPage();
+            } else {
+              updateHighlight();
+            }
+
+            // "Pause after sentence" logic
+            if (settings.pauseAfterSentence && blockIdx >= 0) {
+              const block = srtBlocks[blockIdx];
+              if (time >= block.endTime - 0.05) {
+                const now = performance.now();
+                if (now - pauseGuardTime > 500) {
+                  audioEl.pause();
+                  pauseGuardTime = now;
+                  updatePlayPauseBtn();
+                }
+              }
+            }
+          }
+
+          // Update progress display
+          updateProgressDisplay();
+        }
+
+        animFrameId = requestAnimationFrame(syncLoop);
+      }
+
+      function startSyncLoop() {
+        if (animFrameId) cancelAnimationFrame(animFrameId);
+        animFrameId = requestAnimationFrame(syncLoop);
+      }
+
+      /* ═══════════════════════════════════════════════
+         PLAYBACK CONTROLS
+         ═══════════════════════════════════════════════ */
+      playPauseBtn.addEventListener('click', togglePlayPause);
+
+      function togglePlayPause() {
+        if (!currentBookId) return;
+        if (audioEl.paused) {
+          audioEl.play();
+        } else {
+          audioEl.pause();
+        }
+        updatePlayPauseBtn();
+      }
+
+      function updatePlayPauseBtn() {
+        playPauseBtn.textContent = audioEl.paused ? '▶' : '⏸';
+      }
+
+      audioEl.addEventListener('play', updatePlayPauseBtn);
+      audioEl.addEventListener('pause', updatePlayPauseBtn);
+
+      /* Seek bar */
+      seekBar.addEventListener('input', () => {
+        isSeeking = true;
+        const ratio = seekBar.value / 1000;
+        if (audioEl.duration) {
+          audioEl.currentTime = ratio * audioEl.duration;
+        }
+      });
+      seekBar.addEventListener('change', () => {
+        isSeeking = false;
+        const time = audioEl.currentTime;
+        const targetPage = findPageForTime(time);
+        if (targetPage !== currentPage) {
+          currentPage = targetPage;
+          renderCurrentPage();
+        }
+        updateProgressDisplay();
+      });
+
+      /* Progress bar click */
+      progressBarContainer.addEventListener('click', e => {
+        if (!audioEl.duration) return;
+        const rect = progressBarContainer.getBoundingClientRect();
+        const ratio = (e.clientX - rect.left) / rect.width;
+        audioEl.currentTime = ratio * audioEl.duration;
+        const targetPage = findPageForTime(audioEl.currentTime);
+        if (targetPage !== currentPage) {
+          currentPage = targetPage;
+          renderCurrentPage();
+        }
+        updateProgressDisplay();
+      });
+
+      /* Time update listener for seek bar sync */
+      audioEl.addEventListener('timeupdate', () => {
+        if (!isSeeking && audioEl.duration) {
+          seekBar.value = (audioEl.currentTime / audioEl.duration) * 1000;
+        }
+        updateProgressDisplay();
+      });
+
+      function updateProgressDisplay() {
+        if (!audioEl.duration) return;
+        const cur = audioEl.currentTime;
+        const dur = audioEl.duration;
+        timeDisplay.textContent = `${fmtTime(cur)} / ${fmtTime(dur)}`;
+        const pct = (cur / dur * 100).toFixed(1);
+        progressPercent.textContent = pct + '%';
+        progressBarFill.style.width = (cur / dur * 100) + '%';
+      }
+
+      function fmtTime(sec) {
+        const h = Math.floor(sec / 3600);
+        const m = Math.floor((sec % 3600) / 60);
+        const s = Math.floor(sec % 60);
+        return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+      }
+
+      /* ═══════════════════════════════════════════════
+         SENTENCE NAVIGATION (a / s / d)
+         ═══════════════════════════════════════════════ */
+      function jumpToBlock(blockIdx) {
+        if (blockIdx < 0 || blockIdx >= srtBlocks.length) return;
+        const block = srtBlocks[blockIdx];
+        audioEl.currentTime = block.startTime;
+        pauseGuardTime = 0; // Reset pause guard
+
+        const targetPage = findPageForBlock(blockIdx);
+        if (targetPage !== currentPage) {
+          currentPage = targetPage;
+          renderCurrentPage();
+        } else {
+          updateHighlight();
+        }
+
+        if (audioEl.paused) {
+          audioEl.play();
+          updatePlayPauseBtn();
+        }
+        updateProgressDisplay();
+      }
+
+      function prevSentence() {
+        const blockIdx = findActiveBlockIndex(audioEl.currentTime);
+        if (blockIdx > 0) jumpToBlock(blockIdx - 1);
+        else if (blockIdx === 0) jumpToBlock(0);
+      }
+
+      function currentSentenceRepeat() {
+        const blockIdx = findActiveBlockIndex(audioEl.currentTime);
+        if (blockIdx >= 0) jumpToBlock(blockIdx);
+      }
+
+      function nextSentence() {
+        const blockIdx = findActiveBlockIndex(audioEl.currentTime);
+        if (blockIdx < srtBlocks.length - 1) jumpToBlock(blockIdx + 1);
+      }
+
+      /* ═══════════════════════════════════════════════
+         KEYBOARD SHORTCUTS
+         ═══════════════════════════════════════════════ */
+      document.addEventListener('keydown', e => {
+        // Don't capture when typing in inputs
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+
+        switch (e.key.toLowerCase()) {
+          case 'a':
+            e.preventDefault();
+            prevSentence();
+            break;
+          case 's':
+            e.preventDefault();
+            currentSentenceRepeat();
+            break;
+          case 'd':
+            e.preventDefault();
+            nextSentence();
+            break;
+          case ' ':
+            e.preventDefault();
+            togglePlayPause();
+            break;
+          case 'arrowleft':
+            e.preventDefault();
+            goToPage(currentPage - 1);
+            break;
+          case 'arrowright':
+            e.preventDefault();
+            goToPage(currentPage + 1);
+            break;
+        }
+      });
+
+      /* ═══════════════════════════════════════════════
+         SETTINGS
+         ═══════════════════════════════════════════════ */
+      settingsBtn.addEventListener('click', () => {
+        settingsPanel.classList.toggle('open');
+      });
+      closeSettings.addEventListener('click', () => {
+        settingsPanel.classList.remove('open');
+      });
+
+      function applySettings() {
+        document.documentElement.style.setProperty('--reader-font-size', settings.fontSize + 'px');
+        document.documentElement.style.setProperty('--reader-line-height', String(settings.lineHeight));
+        document.documentElement.style.setProperty('--reader-margin', settings.margin + 'px');
+        document.documentElement.style.setProperty('--font-reader', settings.fontFamily);
+
+        // Highlight color
+        const hc = HIGHLIGHT_COLORS[settings.highlightColor] || HIGHLIGHT_COLORS.yellow;
+        document.documentElement.style.setProperty('--highlight-bg', hc.bg);
+        document.documentElement.style.setProperty('--highlight-border', hc.border);
+
+        // Update slider UI values
+        fontSizeSlider.value = settings.fontSize;
+        fontSizeVal.textContent = settings.fontSize + 'px';
+        lineHeightSlider.value = settings.lineHeight;
+        lineHeightVal.textContent = settings.lineHeight.toFixed(1);
+        marginSlider.value = settings.margin;
+        marginVal.textContent = settings.margin + 'px';
+        fontFamilySelect.value = settings.fontFamily;
+        highlightColorSelect.value = settings.highlightColor;
+
+        // Toggles
+        togglePauseAfter.classList.toggle('on', settings.pauseAfterSentence);
+        toggleAutoTurnLong.classList.toggle('on', settings.autoTurnLong);
+      }
+
+      function onSettingChange() {
+        settings.fontSize = parseInt(fontSizeSlider.value, 10);
+        settings.lineHeight = parseFloat(lineHeightSlider.value);
+        settings.margin = parseInt(marginSlider.value, 10);
+        settings.fontFamily = fontFamilySelect.value;
+        settings.highlightColor = highlightColorSelect.value;
+
+        fontSizeVal.textContent = settings.fontSize + 'px';
+        lineHeightVal.textContent = settings.lineHeight.toFixed(1);
+        marginVal.textContent = settings.margin + 'px';
+
+        applySettings();
+
+        // Re-paginate keeping current block visible
+        if (srtBlocks.length > 0) {
+          const currentBlockIdx = pages[currentPage] ? pages[currentPage][0].blockIdx : 0;
+          paginateContent();
+          currentPage = findPageForBlock(currentBlockIdx);
+          renderCurrentPage();
+        }
+
+        saveSettingsToMeta();
+        setGlobalSettings({
+          fontSize: settings.fontSize,
+          lineHeight: settings.lineHeight,
+          margin: settings.margin,
+          fontFamily: settings.fontFamily
+        });
+      }
+
+      fontSizeSlider.addEventListener('input', onSettingChange);
+      lineHeightSlider.addEventListener('input', onSettingChange);
+      marginSlider.addEventListener('input', onSettingChange);
+      fontFamilySelect.addEventListener('change', onSettingChange);
+      highlightColorSelect.addEventListener('change', onSettingChange);
+
+      togglePauseAfter.addEventListener('click', () => {
+        settings.pauseAfterSentence = !settings.pauseAfterSentence;
+        togglePauseAfter.classList.toggle('on', settings.pauseAfterSentence);
+        pauseGuardTime = 0;
+        saveSettingsToMeta();
+      });
+
+      toggleAutoTurnLong.addEventListener('click', () => {
+        settings.autoTurnLong = !settings.autoTurnLong;
+        toggleAutoTurnLong.classList.toggle('on', settings.autoTurnLong);
+        saveSettingsToMeta();
+      });
+
+      function saveSettingsToMeta() {
+        if (!currentBookId) return;
+        const meta = getBookMeta(currentBookId);
+        meta.settings = { ...settings };
+        setBookMeta(currentBookId, meta);
+      }
+
+      /* ═══════════════════════════════════════════════
+         PROGRESS SAVE / RESTORE
+         ═══════════════════════════════════════════════ */
+      function saveProgress() {
+        if (!currentBookId) return;
+        const meta = getBookMeta(currentBookId);
+        meta.lastTime = audioEl.currentTime || 0;
+        meta.lastPageIndex = currentPage;
+        meta.settings = { ...settings };
+        setBookMeta(currentBookId, meta);
+      }
+
+      // Auto-save progress periodically
+      setInterval(() => {
+        if (currentBookId && !audioEl.paused) {
+          saveProgress();
+        }
+      }, 3000);
+
+      // Save on page unload
+      window.addEventListener('beforeunload', () => {
+        if (currentBookId) saveProgress();
+      });
+
+      /* ═══════════════════════════════════════════════
+         WINDOW RESIZE → RE-PAGINATE
+         ═══════════════════════════════════════════════ */
+      let resizeTimer;
+      window.addEventListener('resize', () => {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(() => {
+          if (srtBlocks.length > 0) {
+            const currentBlockIdx = pages[currentPage] ? pages[currentPage][0].blockIdx : 0;
+            paginateContent();
+            currentPage = findPageForBlock(currentBlockIdx);
+            renderCurrentPage();
+          }
+        }, 200);
+      });
+
+      /* ═══════════════════════════════════════════════
+         INITIALIZATION
+         ═══════════════════════════════════════════════ */
+      function init() {
+        // Load global settings
+        const gs = getGlobalSettings();
+        if (gs.fontSize) settings.fontSize = gs.fontSize;
+        if (gs.lineHeight) settings.lineHeight = gs.lineHeight;
+        if (gs.margin) settings.margin = gs.margin;
+        if (gs.fontFamily) settings.fontFamily = gs.fontFamily;
+        applySettings();
+
+        // Populate library
+        refreshLibraryUI();
+        showEmptyState();
+      }
+
+      init();
+
+    })();
+  </script>
+</body>
+
+</html>
