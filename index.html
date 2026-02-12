@@ -392,7 +392,7 @@
     /* Page info footer */
     #pageInfo {
       position: absolute;
-      bottom: 56px;
+      bottom: 20px;
       left: 0;
       right: 0;
       text-align: center;
@@ -435,17 +435,17 @@
       flex-shrink: 0;
       background: var(--bg-secondary);
       border-top: 1px solid var(--border);
-      padding: 10px 20px;
+      padding: 6px 20px;
       z-index: 100;
     }
 
     /* Progress bar at top of player */
     #progressBarContainer {
       width: 100%;
-      height: 4px;
+      height: 6px;
       background: var(--bg-tertiary);
-      border-radius: 2px;
-      margin-bottom: 10px;
+      border-radius: 3px;
+      margin-bottom: 6px;
       cursor: pointer;
       position: relative;
     }
@@ -453,9 +453,24 @@
     #progressBarFill {
       height: 100%;
       background: linear-gradient(90deg, var(--accent), #a78bfa);
-      border-radius: 2px;
+      border-radius: 3px;
       width: 0%;
       transition: width 0.1s linear;
+      position: relative;
+    }
+
+    #progressBarFill::after {
+      content: '';
+      position: absolute;
+      right: -7px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 14px;
+      height: 14px;
+      background: var(--accent);
+      border: 2px solid #fff;
+      border-radius: 50%;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
     }
 
     #playerControls {
@@ -486,23 +501,24 @@
 
     #seekBar {
       flex: 1;
-      height: 4px;
+      height: 6px;
       -webkit-appearance: none;
       appearance: none;
       background: var(--bg-tertiary);
-      border-radius: 2px;
+      border-radius: 3px;
       outline: none;
       cursor: pointer;
     }
 
     #seekBar::-webkit-slider-thumb {
       -webkit-appearance: none;
-      width: 14px;
-      height: 14px;
+      width: 22px;
+      height: 22px;
       background: var(--accent);
       border-radius: 50%;
       cursor: pointer;
-      border: 2px solid var(--bg-secondary);
+      border: 3px solid #fff;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
     }
 
     #timeDisplay {
