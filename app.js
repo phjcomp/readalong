@@ -4,6 +4,18 @@
   /* ─── Config ─── */
   const FIREBASE_URL = 'https://read-along-sync-default-rtdb.firebaseio.com';
 
+  /* ─── Helpers ─── */
+  function gsToHttp(url) {
+    // Convert gs://bucket/path to https://firebasestorage.googleapis.com/v0/b/bucket/o/path?alt=media
+    if (!url.startsWith('gs://')) return url;
+    const noPrefix = url.slice(5); // remove 'gs://'
+    const slashIdx = noPrefix.indexOf('/');
+    if (slashIdx === -1) return url;
+    const bucket = noPrefix.slice(0, slashIdx);
+    const path = encodeURIComponent(noPrefix.slice(slashIdx + 1));
+    return `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/${path}?alt=media`;
+  }
+
   /* ─── DOM refs ─── */
   const $ = id => document.getElementById(id);
   const audioEl = $('audioEl');
@@ -191,6 +203,25 @@
     if (e.target === uploadModal) uploadModal.classList.remove('active');
   });
 
+  // Auto-fill title from SRT filename
+  inputSrtFile.addEventListener('change', () => {
+    const file = inputSrtFile.files[0];
+    if (file && !inputTitle.value.trim()) {
+      inputTitle.value = file.name.replace(/\.[^.]+$/, '');
+    }
+  });
+
+  // Auto-fill title from MP3 URL if title is empty
+  inputMp3Url.addEventListener('input', () => {
+    if (!inputTitle.value.trim()) {
+      const url = inputMp3Url.value.trim();
+      const match = url.match(/\/([^/?]+\.mp3)/i) || url.match(/\/([^/]+)$/i);
+      if (match) {
+        inputTitle.value = decodeURIComponent(match[1]).replace(/\.[^.]+$/, '');
+      }
+    }
+  });
+
   saveUpload.addEventListener('click', async () => {
     const title = inputTitle.value.trim();
     const mp3Url = inputMp3Url.value.trim();
@@ -203,7 +234,8 @@
     try {
       const srtText = await srtFile.text();
       const id = generateId();
-      const bookEntry = { id, title, mp3Url, createdAt: Date.now() };
+      const finalMp3Url = gsToHttp(mp3Url);
+      const bookEntry = { id, title, mp3Url: finalMp3Url, createdAt: Date.now() };
       await fbPut(`users/${userPin}/library/${id}`, bookEntry);
       await fbPut(`users/${userPin}/srt/${id}`, srtText);
       library[id] = bookEntry;
