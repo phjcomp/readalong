@@ -34,6 +34,8 @@
   const saveUpload = $('saveUpload');
   const pageContent = $('pageContent');
   const emptyState = $('emptyState');
+  const libraryGrid = $('libraryGrid');
+  const noBooksMsg = $('noBooksMsg');
   const pageInfo = $('pageInfo');
   const prevPageBtn = $('prevPage');
   const nextPageBtn = $('nextPage');
@@ -166,6 +168,7 @@
   async function loadLibrary() {
     library = (await fbGet(`users/${userPin}/library`)) || {};
     refreshLibraryUI();
+    await refreshLibraryGrid();
     showEmptyState();
     // Load per-device settings from localStorage
     const ds = getLocalSettings();
@@ -187,6 +190,59 @@
       opt.textContent = b.title;
       if (b.id === currentBookId) opt.selected = true;
       librarySelect.appendChild(opt);
+    });
+  }
+
+  async function refreshLibraryGrid() {
+    libraryGrid.innerHTML = '';
+    const books = Object.values(library);
+    books.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+    if (books.length === 0) {
+      noBooksMsg.style.display = 'flex';
+      return;
+    }
+    noBooksMsg.style.display = 'none';
+
+    // Fetch all progress data
+    const allProgress = (await fbGet(`users/${userPin}/progress`)) || {};
+
+    books.forEach(book => {
+      const card = document.createElement('div');
+      card.className = 'book-card';
+
+      const icon = document.createElement('div');
+      icon.className = 'book-icon';
+      icon.textContent = '📚';
+
+      const title = document.createElement('div');
+      title.className = 'book-title';
+      title.textContent = book.title;
+
+      card.appendChild(icon);
+      card.appendChild(title);
+
+      // Progress info
+      const prog = allProgress[book.id];
+      if (prog && prog.lastTime > 0) {
+        const progText = document.createElement('div');
+        progText.className = 'book-progress';
+        const pct = prog.percentComplete ? Math.round(prog.percentComplete) : 0;
+        progText.textContent = pct > 0 ? `${pct}% complete` : 'In progress';
+        card.appendChild(progText);
+
+        if (pct > 0) {
+          const bar = document.createElement('div');
+          bar.className = 'progress-bar';
+          const fill = document.createElement('div');
+          fill.className = 'fill';
+          fill.style.width = pct + '%';
+          bar.appendChild(fill);
+          card.appendChild(bar);
+        }
+      }
+
+      card.addEventListener('click', () => loadBook(book.id));
+      libraryGrid.appendChild(card);
     });
   }
 
@@ -334,6 +390,7 @@
     pageContent.innerHTML = '';
     playerBar.style.display = 'none';
     pageInfo.textContent = '';
+    refreshLibraryGrid();
   }
 
   /* ═══ SENTENCE GROUPING ═══ */
@@ -802,9 +859,12 @@
   async function flushProgress() {
     if (!progressDirty || !currentBookId || !userPin) return;
     progressDirty = false;
+    const duration = audioEl.duration || 1;
+    const pct = Math.min((audioEl.currentTime / duration) * 100, 100);
     await fbPut(`users/${userPin}/progress/${currentBookId}`, {
       lastTime: audioEl.currentTime || 0,
       lastPageIndex: currentPage,
+      percentComplete: Math.round(pct * 10) / 10,
       lastUpdated: Date.now()
     });
   }

@@ -446,29 +446,106 @@
       z-index: 5;
     }
 
-    /* Empty state */
+    /* Empty state / Library grid */
     #emptyState {
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
+      justify-content: flex-start;
       height: 100%;
       text-align: center;
       color: var(--text-muted);
-      gap: 16px;
+      overflow-y: auto;
+      padding: 20px 16px;
     }
 
-    #emptyState .icon {
+    #noBooksMsg {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      flex: 1;
+    }
+
+    #noBooksMsg .icon {
       font-size: 56px;
       opacity: 0.4;
     }
 
-    #emptyState .msg {
+    #noBooksMsg .msg {
       font-size: 16px;
     }
 
-    #emptyState .hint {
+    #noBooksMsg .hint {
       font-size: 13px;
+    }
+
+    #libraryGrid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 16px;
+      width: 100%;
+      max-width: 800px;
+    }
+
+    .book-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px 16px;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .book-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+      border-color: var(--accent);
+    }
+
+    .book-card:active {
+      transform: translateY(0);
+    }
+
+    .book-card .book-icon {
+      font-size: 40px;
+      opacity: 0.8;
+    }
+
+    .book-card .book-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+      line-height: 1.3;
+      word-break: break-word;
+      text-align: center;
+    }
+
+    .book-card .book-progress {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .book-card .progress-bar {
+      width: 100%;
+      height: 3px;
+      background: var(--bg-tertiary);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .book-card .progress-bar .fill {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 2px;
+      transition: width 0.3s;
     }
 
     /* ═══════════════════════════════════════════════
@@ -913,9 +990,12 @@
     <div id="pageContainer">
       <div id="pageContent"></div>
       <div id="emptyState">
-        <div class="icon">📖</div>
-        <div class="msg">No audiobook loaded</div>
-        <div class="hint">Click <strong>＋ Add</strong> to add an audiobook via URL</div>
+        <div id="libraryGrid"></div>
+        <div id="noBooksMsg">
+          <div class="icon">📖</div>
+          <div class="msg">No audiobook loaded</div>
+          <div class="hint">Click <strong>＋ Add</strong> to add an audiobook via URL</div>
+        </div>
       </div>
     </div>
     <div class="page-nav right" id="nextPage">›</div>
