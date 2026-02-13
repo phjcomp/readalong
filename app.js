@@ -398,21 +398,49 @@
   }
 
   function splitBlockToFitPages(text, maxHeight) {
-    const words = text.split(/\s+/);
-    const parts = [];
-    let startIdx = 0;
-    while (startIdx < words.length) {
-      let lo = 1, hi = words.length - startIdx, best = 1;
-      while (lo <= hi) {
-        const mid = Math.floor((lo + hi) / 2);
-        const testText = words.slice(startIdx, startIdx + mid).join(' ');
-        if (measureBlockHeight(testText) <= maxHeight) { best = mid; lo = mid + 1; }
-        else { hi = mid - 1; }
-      }
-      if (best < 1) best = 1;
-      parts.push(words.slice(startIdx, startIdx + best).join(' '));
-      startIdx += best;
+    // Split text into sentences (keeping the delimiter attached)
+    const sentences = text.match(/[^.!?]+[.!?]+[\s]*/g) || [text];
+    // If last part was missed (no ending punctuation), add remainder
+    const joined = sentences.join('');
+    if (joined.length < text.length) {
+      sentences.push(text.slice(joined.length));
     }
+
+    const parts = [];
+    let currentPart = '';
+    for (let i = 0; i < sentences.length; i++) {
+      const candidate = currentPart ? currentPart + sentences[i] : sentences[i];
+      if (measureBlockHeight(candidate) <= maxHeight) {
+        currentPart = candidate;
+      } else {
+        // Push what we have so far (if anything)
+        if (currentPart.trim()) {
+          parts.push(currentPart.trim());
+        }
+        // Check if this single sentence fits on its own
+        if (measureBlockHeight(sentences[i]) <= maxHeight) {
+          currentPart = sentences[i];
+        } else {
+          // Single sentence too long — fall back to word splitting
+          const words = sentences[i].split(/\s+/);
+          let wStart = 0;
+          while (wStart < words.length) {
+            let lo = 1, hi = words.length - wStart, best = 1;
+            while (lo <= hi) {
+              const mid = Math.floor((lo + hi) / 2);
+              const testText = words.slice(wStart, wStart + mid).join(' ');
+              if (measureBlockHeight(testText) <= maxHeight) { best = mid; lo = mid + 1; }
+              else { hi = mid - 1; }
+            }
+            if (best < 1) best = 1;
+            parts.push(words.slice(wStart, wStart + best).join(' '));
+            wStart += best;
+          }
+          currentPart = '';
+        }
+      }
+    }
+    if (currentPart.trim()) parts.push(currentPart.trim());
     return parts;
   }
 
