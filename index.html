@@ -348,9 +348,46 @@
     #pageContent .srt-block {
       margin-bottom: 0.4em;
       padding: 4px 8px;
+      padding-left: 32px;
       border-radius: 6px;
       border-left: 3px solid transparent;
       transition: border-color 0.3s;
+      position: relative;
+    }
+
+    #pageContent .srt-block .copy-btn {
+      position: absolute;
+      left: 6px;
+      top: 6px;
+      width: 22px;
+      height: 22px;
+      border: none;
+      background: none;
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+      font-size: 14px;
+      border-radius: 4px;
+      padding: 0;
+    }
+
+    #pageContent .srt-block:hover .copy-btn {
+      opacity: 0.6;
+    }
+
+    #pageContent .srt-block .copy-btn:hover {
+      opacity: 1;
+      color: var(--accent);
+      background: var(--bg-tertiary);
+    }
+
+    #pageContent .srt-block .copy-btn.copied {
+      opacity: 1;
+      color: var(--success);
     }
 
     #pageContent .srt-block.active {

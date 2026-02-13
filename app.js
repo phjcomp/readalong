@@ -447,6 +447,25 @@
       div.className = 'srt-block';
       div.dataset.groupIdx = item.groupIdx;
 
+      // Copy button
+      const copyBtn = document.createElement('button');
+      copyBtn.className = 'copy-btn';
+      copyBtn.title = 'Copy sentence';
+      copyBtn.innerHTML = '📋';
+      const textToCopy = item.isPartial ? item.partialText : group.text;
+      copyBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        navigator.clipboard.writeText(textToCopy).then(() => {
+          copyBtn.innerHTML = '✓';
+          copyBtn.classList.add('copied');
+          setTimeout(() => {
+            copyBtn.innerHTML = '📋';
+            copyBtn.classList.remove('copied');
+          }, 1500);
+        });
+      });
+      div.appendChild(copyBtn);
+
       if (item.isPartial) {
         const span = document.createElement('span');
         span.className = 'srt-text';
