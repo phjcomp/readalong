@@ -396,12 +396,14 @@
 
   function buildSentenceGroups() {
     sentenceGroups = [];
+    const MAX_GROUP_BLOCKS = 4; // prevent giant paragraphs
     let currentGroup = { blockIndices: [], text: '' };
     for (let i = 0; i < srtBlocks.length; i++) {
       const blockText = srtBlocks[i].text;
       currentGroup.blockIndices.push(i);
       currentGroup.text += (currentGroup.text ? ' ' : '') + blockText;
-      if (/[.!?][\s]*$/.test(blockText.trimEnd())) {
+      // Break group on sentence-ending punctuation OR max block count
+      if (/[.!?][\s]*$/.test(blockText.trimEnd()) || currentGroup.blockIndices.length >= MAX_GROUP_BLOCKS) {
         sentenceGroups.push(currentGroup);
         currentGroup = { blockIndices: [], text: '' };
       }
