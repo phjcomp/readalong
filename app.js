@@ -336,10 +336,31 @@
     pageInfo.textContent = '';
   }
 
+  /* ═══ SENTENCE GROUPING ═══ */
+  let sentenceGroups = []; // [{blockIndices: [0,1,2], text: "merged text"}, ...]
+
+  function buildSentenceGroups() {
+    sentenceGroups = [];
+    let currentGroup = { blockIndices: [], text: '' };
+    for (let i = 0; i < srtBlocks.length; i++) {
+      const blockText = srtBlocks[i].text;
+      currentGroup.blockIndices.push(i);
+      currentGroup.text += (currentGroup.text ? ' ' : '') + blockText;
+      if (/[.!?][\s]*$/.test(blockText.trimEnd())) {
+        sentenceGroups.push(currentGroup);
+        currentGroup = { blockIndices: [], text: '' };
+      }
+    }
+    if (currentGroup.blockIndices.length > 0) {
+      sentenceGroups.push(currentGroup);
+    }
+  }
+
   /* ═══ PAGINATION ENGINE ═══ */
   function paginateContent() {
     pages = [];
-    if (srtBlocks.length === 0) return;
+    buildSentenceGroups();
+    if (sentenceGroups.length === 0) return;
     const container = $('pageContainer');
     const containerHeight = container.clientHeight
       - parseInt(getComputedStyle(container).paddingTop)
@@ -353,49 +374,32 @@
     measureDiv.style.wordWrap = 'break-word';
     measureDiv.style.overflowWrap = 'break-word';
 
-    let currentPageBlocks = [];
+    let currentPageItems = [];
     let currentHeight = 0;
-    for (let i = 0; i < srtBlocks.length; i++) {
-      const block = srtBlocks[i];
-      const blockHeight = measureBlockHeight(block.text);
-      if (currentHeight + blockHeight <= containerHeight) {
-        currentPageBlocks.push({
-          blockIdx: i, text: block.text,
-          isPartial: false, partIdx: 0, totalParts: 1
-        });
-        currentHeight += blockHeight;
-      } else if (currentPageBlocks.length === 0) {
-        const parts = splitBlockToFitPages(block.text, containerHeight);
+    for (let g = 0; g < sentenceGroups.length; g++) {
+      const group = sentenceGroups[g];
+      const groupHeight = measureBlockHeight(group.text);
+      if (currentHeight + groupHeight <= containerHeight) {
+        currentPageItems.push({ groupIdx: g });
+        currentHeight += groupHeight;
+      } else if (currentPageItems.length === 0) {
+        const parts = splitTextToFitPages(group.text, containerHeight);
         for (let p = 0; p < parts.length; p++) {
           pages.push([{
-            blockIdx: i, text: parts[p],
+            groupIdx: g, partialText: parts[p],
             isPartial: parts.length > 1, partIdx: p, totalParts: parts.length
           }]);
         }
         currentHeight = 0;
-        currentPageBlocks = [];
+        currentPageItems = [];
       } else {
-        // Try to break at a sentence boundary (last block ending with . ? !)
-        let breakAt = currentPageBlocks.length; // default: push all current blocks
-        for (let j = currentPageBlocks.length - 1; j >= 1; j--) {
-          const txt = currentPageBlocks[j - 1].text.trimEnd();
-          if (/[.!?]$/.test(txt)) {
-            breakAt = j;
-            break;
-          }
-        }
-        pages.push(currentPageBlocks.slice(0, breakAt));
-        const remaining = currentPageBlocks.slice(breakAt);
-        currentPageBlocks = [];
+        pages.push([...currentPageItems]);
+        currentPageItems = [];
         currentHeight = 0;
-        for (const item of remaining) {
-          currentHeight += measureBlockHeight(item.text);
-          currentPageBlocks.push(item);
-        }
-        i--;
+        g--;
       }
     }
-    if (currentPageBlocks.length > 0) pages.push([...currentPageBlocks]);
+    if (currentPageItems.length > 0) pages.push([...currentPageItems]);
   }
 
   function measureBlockHeight(text) {
@@ -411,50 +415,22 @@
     return el.offsetHeight + marginBottom;
   }
 
-  function splitBlockToFitPages(text, maxHeight) {
-    // Split text into sentences (keeping the delimiter attached)
-    const sentences = text.match(/[^.!?]+[.!?]+[\s]*/g) || [text];
-    // If last part was missed (no ending punctuation), add remainder
-    const joined = sentences.join('');
-    if (joined.length < text.length) {
-      sentences.push(text.slice(joined.length));
-    }
-
+  function splitTextToFitPages(text, maxHeight) {
+    const words = text.split(/\s+/);
     const parts = [];
-    let currentPart = '';
-    for (let i = 0; i < sentences.length; i++) {
-      const candidate = currentPart ? currentPart + sentences[i] : sentences[i];
-      if (measureBlockHeight(candidate) <= maxHeight) {
-        currentPart = candidate;
-      } else {
-        // Push what we have so far (if anything)
-        if (currentPart.trim()) {
-          parts.push(currentPart.trim());
-        }
-        // Check if this single sentence fits on its own
-        if (measureBlockHeight(sentences[i]) <= maxHeight) {
-          currentPart = sentences[i];
-        } else {
-          // Single sentence too long — fall back to word splitting
-          const words = sentences[i].split(/\s+/);
-          let wStart = 0;
-          while (wStart < words.length) {
-            let lo = 1, hi = words.length - wStart, best = 1;
-            while (lo <= hi) {
-              const mid = Math.floor((lo + hi) / 2);
-              const testText = words.slice(wStart, wStart + mid).join(' ');
-              if (measureBlockHeight(testText) <= maxHeight) { best = mid; lo = mid + 1; }
-              else { hi = mid - 1; }
-            }
-            if (best < 1) best = 1;
-            parts.push(words.slice(wStart, wStart + best).join(' '));
-            wStart += best;
-          }
-          currentPart = '';
-        }
+    let startIdx = 0;
+    while (startIdx < words.length) {
+      let lo = 1, hi = words.length - startIdx, best = 1;
+      while (lo <= hi) {
+        const mid = Math.floor((lo + hi) / 2);
+        const testText = words.slice(startIdx, startIdx + mid).join(' ');
+        if (measureBlockHeight(testText) <= maxHeight) { best = mid; lo = mid + 1; }
+        else { hi = mid - 1; }
       }
+      if (best < 1) best = 1;
+      parts.push(words.slice(startIdx, startIdx + best).join(' '));
+      startIdx += best;
     }
-    if (currentPart.trim()) parts.push(currentPart.trim());
     return parts;
   }
 
@@ -466,13 +442,27 @@
     const pg = pages[currentPage];
     pageContent.innerHTML = '';
     pg.forEach(item => {
+      const group = sentenceGroups[item.groupIdx];
       const div = document.createElement('div');
       div.className = 'srt-block';
-      div.dataset.blockIdx = item.blockIdx;
-      const span = document.createElement('span');
-      span.className = 'srt-text';
-      span.textContent = item.text;
-      div.appendChild(span);
+      div.dataset.groupIdx = item.groupIdx;
+
+      if (item.isPartial) {
+        const span = document.createElement('span');
+        span.className = 'srt-text';
+        span.dataset.blockIdx = group.blockIndices[0];
+        span.textContent = item.partialText;
+        div.appendChild(span);
+      } else {
+        group.blockIndices.forEach((blockIdx, i) => {
+          const span = document.createElement('span');
+          span.className = 'srt-text';
+          span.dataset.blockIdx = blockIdx;
+          span.textContent = (i > 0 ? ' ' : '') + srtBlocks[blockIdx].text;
+          div.appendChild(span);
+        });
+      }
+
       pageContent.appendChild(div);
     });
     pageContent.classList.remove('fade-in');
@@ -485,13 +475,15 @@
 
   function updateHighlight() {
     const activeIdx = findActiveBlockIndex(audioEl.currentTime);
+    const spans = pageContent.querySelectorAll('.srt-text');
+    spans.forEach(span => {
+      const idx = parseInt(span.dataset.blockIdx, 10);
+      span.classList.toggle('active', idx === activeIdx);
+    });
     const blockEls = pageContent.querySelectorAll('.srt-block');
     blockEls.forEach(el => {
-      const idx = parseInt(el.dataset.blockIdx, 10);
-      const isActive = idx === activeIdx;
-      el.classList.toggle('active', isActive);
-      const span = el.querySelector('.srt-text');
-      if (span) span.classList.toggle('active', isActive);
+      const hasActive = el.querySelector('.srt-text.active');
+      el.classList.toggle('active', !!hasActive);
     });
   }
 
@@ -518,8 +510,12 @@
   }
 
   function findPageForBlock(blockIdx) {
+    // Find which sentence group contains this block
     for (let i = 0; i < pages.length; i++) {
-      for (const item of pages[i]) { if (item.blockIdx === blockIdx) return i; }
+      for (const item of pages[i]) {
+        const group = sentenceGroups[item.groupIdx];
+        if (group && group.blockIndices.includes(blockIdx)) return i;
+      }
     }
     return 0;
   }
@@ -531,10 +527,14 @@
   }
 
   function findPageForBlockWithSubpage(blockIdx, time) {
+    // Find all pages that contain this block's sentence group
     const blockPages = [];
     for (let i = 0; i < pages.length; i++) {
       for (const item of pages[i]) {
-        if (item.blockIdx === blockIdx) blockPages.push({ pageIdx: i, item });
+        const group = sentenceGroups[item.groupIdx];
+        if (group && group.blockIndices.includes(blockIdx)) {
+          blockPages.push({ pageIdx: i, item });
+        }
       }
     }
     if (blockPages.length === 0) return 0;
