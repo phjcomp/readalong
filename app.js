@@ -455,14 +455,29 @@
       const textToCopy = item.isPartial ? item.partialText : group.text;
       copyBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        navigator.clipboard.writeText(textToCopy).then(() => {
+        // Select text spans so Chrome extensions can detect the selection
+        const selection = window.getSelection();
+        const range = document.createRange();
+        // Select all srt-text spans in this div (added after copyBtn)
+        setTimeout(() => {
+          const spans = div.querySelectorAll('.srt-text');
+          if (spans.length > 0) {
+            range.setStartBefore(spans[0]);
+            range.setEndAfter(spans[spans.length - 1]);
+            selection.removeAllRanges();
+            selection.addRange(range);
+          }
+          // Also copy to clipboard
+          try { document.execCommand('copy'); } catch (_) {
+            navigator.clipboard.writeText(textToCopy);
+          }
           copyBtn.innerHTML = '✓';
           copyBtn.classList.add('copied');
           setTimeout(() => {
             copyBtn.innerHTML = '📋';
             copyBtn.classList.remove('copied');
           }, 1500);
-        });
+        }, 0);
       });
       div.appendChild(copyBtn);
 
