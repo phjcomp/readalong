@@ -482,59 +482,58 @@
     }
 
     #libraryGrid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-      gap: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
       width: 100%;
-      max-width: 800px;
+      max-width: 600px;
     }
 
     .book-card {
       background: var(--bg-secondary);
       border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 20px 16px;
+      border-radius: 8px;
+      padding: 14px 16px;
       cursor: pointer;
-      transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+      transition: background 0.15s, border-color 0.15s;
       display: flex;
-      flex-direction: column;
       align-items: center;
-      gap: 10px;
-      position: relative;
-      overflow: hidden;
+      gap: 12px;
     }
 
     .book-card:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+      background: var(--bg-tertiary);
       border-color: var(--accent);
     }
 
     .book-card:active {
-      transform: translateY(0);
-    }
-
-    .book-card .book-icon {
-      font-size: 40px;
       opacity: 0.8;
     }
 
     .book-card .book-title {
-      font-size: 14px;
-      font-weight: 600;
+      font-size: 15px;
+      font-weight: 500;
       color: var(--text-primary);
-      line-height: 1.3;
-      word-break: break-word;
-      text-align: center;
+      flex: 1;
+      text-align: left;
+    }
+
+    .book-card .book-right {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 4px;
+      min-width: 80px;
     }
 
     .book-card .book-progress {
-      font-size: 11px;
+      font-size: 12px;
       color: var(--text-muted);
+      white-space: nowrap;
     }
 
     .book-card .progress-bar {
-      width: 100%;
+      width: 80px;
       height: 3px;
       background: var(--bg-tertiary);
       border-radius: 2px;
@@ -545,7 +544,6 @@
       height: 100%;
       background: var(--accent);
       border-radius: 2px;
-      transition: width 0.3s;
     }
 
     /* ═══════════════════════════════════════════════

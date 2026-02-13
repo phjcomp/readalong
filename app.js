@@ -210,25 +210,22 @@
       const card = document.createElement('div');
       card.className = 'book-card';
 
-      const icon = document.createElement('div');
-      icon.className = 'book-icon';
-      icon.textContent = '📚';
-
       const title = document.createElement('div');
       title.className = 'book-title';
       title.textContent = book.title;
-
-      card.appendChild(icon);
       card.appendChild(title);
 
-      // Progress info
+      // Progress info on the right
       const prog = allProgress[book.id];
+      const right = document.createElement('div');
+      right.className = 'book-right';
+
       if (prog && prog.lastTime > 0) {
+        const pct = prog.percentComplete ? Math.round(prog.percentComplete) : 0;
         const progText = document.createElement('div');
         progText.className = 'book-progress';
-        const pct = prog.percentComplete ? Math.round(prog.percentComplete) : 0;
-        progText.textContent = pct > 0 ? `${pct}% complete` : 'In progress';
-        card.appendChild(progText);
+        progText.textContent = pct > 0 ? `${pct}%` : '—';
+        right.appendChild(progText);
 
         if (pct > 0) {
           const bar = document.createElement('div');
@@ -237,10 +234,11 @@
           fill.className = 'fill';
           fill.style.width = pct + '%';
           bar.appendChild(fill);
-          card.appendChild(bar);
+          right.appendChild(bar);
         }
       }
 
+      card.appendChild(right);
       card.addEventListener('click', () => loadBook(book.id));
       libraryGrid.appendChild(card);
     });
