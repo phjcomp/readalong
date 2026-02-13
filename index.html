@@ -350,15 +350,20 @@
       padding: 4px 8px;
       border-radius: 6px;
       border-left: 3px solid transparent;
-      transition: background 0.3s, border-color 0.3s;
-      width: fit-content;
-      max-width: 100%;
+      transition: border-color 0.3s;
     }
 
     #pageContent .srt-block.active {
-      background: var(--highlight-bg);
       border-left-color: var(--highlight-border);
-      box-shadow: none;
+    }
+
+    #pageContent .srt-text.active {
+      background: var(--highlight-bg);
+      border-radius: 4px;
+      padding: 2px 4px;
+      margin: -2px -4px;
+      box-decoration-break: clone;
+      -webkit-box-decoration-break: clone;
     }
 
     /* Page nav arrows */

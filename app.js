@@ -375,9 +375,23 @@
         currentHeight = 0;
         currentPageBlocks = [];
       } else {
-        pages.push([...currentPageBlocks]);
+        // Try to break at a sentence boundary (last block ending with . ? !)
+        let breakAt = currentPageBlocks.length; // default: push all current blocks
+        for (let j = currentPageBlocks.length - 1; j >= 1; j--) {
+          const txt = currentPageBlocks[j - 1].text.trimEnd();
+          if (/[.!?]$/.test(txt)) {
+            breakAt = j;
+            break;
+          }
+        }
+        pages.push(currentPageBlocks.slice(0, breakAt));
+        const remaining = currentPageBlocks.slice(breakAt);
         currentPageBlocks = [];
         currentHeight = 0;
+        for (const item of remaining) {
+          currentHeight += measureBlockHeight(item.text);
+          currentPageBlocks.push(item);
+        }
         i--;
       }
     }
@@ -455,7 +469,10 @@
       const div = document.createElement('div');
       div.className = 'srt-block';
       div.dataset.blockIdx = item.blockIdx;
-      div.textContent = item.text;
+      const span = document.createElement('span');
+      span.className = 'srt-text';
+      span.textContent = item.text;
+      div.appendChild(span);
       pageContent.appendChild(div);
     });
     pageContent.classList.remove('fade-in');
@@ -471,7 +488,10 @@
     const blockEls = pageContent.querySelectorAll('.srt-block');
     blockEls.forEach(el => {
       const idx = parseInt(el.dataset.blockIdx, 10);
-      el.classList.toggle('active', idx === activeIdx);
+      const isActive = idx === activeIdx;
+      el.classList.toggle('active', isActive);
+      const span = el.querySelector('.srt-text');
+      if (span) span.classList.toggle('active', isActive);
     });
   }
 
