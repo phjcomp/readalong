@@ -396,7 +396,7 @@
 
   function buildSentenceGroups() {
     sentenceGroups = [];
-    const MAX_GROUP_BLOCKS = 4; // prevent giant paragraphs
+    const MAX_GROUP_BLOCKS = 2; // prevent giant paragraphs
     let currentGroup = { blockIndices: [], text: '' };
     for (let i = 0; i < srtBlocks.length; i++) {
       const blockText = srtBlocks[i].text;
