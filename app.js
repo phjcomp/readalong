@@ -422,7 +422,7 @@
     const containerHeight = container.clientHeight
       - parseInt(getComputedStyle(container).paddingTop)
       - parseInt(getComputedStyle(container).paddingBottom)
-      - 10; // safety buffer to prevent last-line clipping on mobile
+      - 30; // safety buffer to prevent last-line clipping on mobile
     measureDiv.style.width = (container.clientWidth
       - parseInt(getComputedStyle(container).paddingLeft)
       - parseInt(getComputedStyle(container).paddingRight)) + 'px';

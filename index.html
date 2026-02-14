@@ -357,8 +357,9 @@
 
     #pageContent .srt-block .copy-btn {
       position: absolute;
-      right: 6px;
+      left: 6px;
       top: 6px;
+      z-index: 15;
       width: 22px;
       height: 22px;
       border: none;
@@ -408,7 +409,7 @@
       position: absolute;
       top: 0;
       bottom: 0;
-      width: 15%;
+      width: 40px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -866,7 +867,7 @@
     /* ═══════════════════════════════════════════════
    MOBILE RESPONSIVE
    ═══════════════════════════════════════════════ */
-    @media (max-width: 600px) {
+    @media (max-width: 768px) {
       #topBar {
         padding: 8px 12px;
         gap: 8px;
@@ -889,7 +890,7 @@
       }
 
       #pageContainer {
-        padding: 20px 16px 80px;
+        padding: 20px 16px 100px;
       }
 
       .page-nav {
@@ -910,6 +911,68 @@
       .modal {
         padding: 24px 16px;
         width: 95vw;
+      }
+
+      /* Hide copy buttons on mobile */
+      #pageContent .srt-block .copy-btn {
+        display: none !important;
+      }
+
+      /* Remove extra left padding since copy button is hidden */
+      #pageContent .srt-block {
+        padding-left: 8px;
+      }
+    }
+
+    /* Landscape warning overlay on mobile */
+    #landscapeWarning {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: var(--bg-primary);
+      z-index: 9999;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      color: var(--text-secondary);
+      font-family: var(--font-ui);
+      text-align: center;
+      padding: 20px;
+    }
+
+    #landscapeWarning .rotate-icon {
+      font-size: 56px;
+      animation: rotateHint 2s ease-in-out infinite;
+    }
+
+    #landscapeWarning .rotate-msg {
+      font-size: 18px;
+      font-weight: 500;
+    }
+
+    @keyframes rotateHint {
+
+      0%,
+      100% {
+        transform: rotate(0deg);
+      }
+
+      25% {
+        transform: rotate(-20deg);
+      }
+
+      75% {
+        transform: rotate(20deg);
+      }
+    }
+
+    @media screen and (max-width: 900px) and (orientation: landscape) {
+      #landscapeWarning {
+        display: flex !important;
       }
     }
 
@@ -1080,8 +1143,19 @@
   <!-- Hidden measure div for pagination -->
   <div id="measureDiv"></div>
 
+  <!-- Landscape warning overlay (mobile) -->
+  <div id="landscapeWarning">
+    <div class="rotate-icon">📱</div>
+    <div class="rotate-msg">Please rotate to portrait mode</div>
+  </div>
+
   <!-- Audio element -->
   <audio id="audioEl" preload="auto"></audio>
+
+  <!-- Try to lock orientation via Screen Orientation API -->
+  <script>
+    try { screen.orientation.lock('portrait').catch(function () { }); } catch (e) { }
+  </script>
 
   <script src="app.js"></script>
 </body>
