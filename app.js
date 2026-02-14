@@ -419,13 +419,9 @@
     buildSentenceGroups();
     if (sentenceGroups.length === 0) return;
     const container = $('pageContainer');
-    const containerHeight = container.clientHeight
-      - parseInt(getComputedStyle(container).paddingTop)
-      - parseInt(getComputedStyle(container).paddingBottom)
-      - 5; // small safety buffer for rounding (padding handles player bar clearance)
-    measureDiv.style.width = (container.clientWidth
-      - parseInt(getComputedStyle(container).paddingLeft)
-      - parseInt(getComputedStyle(container).paddingRight)) + 'px';
+    const content = $('pageContent');
+    const containerHeight = content.clientHeight;
+    measureDiv.style.width = content.clientWidth + 'px';
     measureDiv.style.fontFamily = settings.fontFamily;
     measureDiv.style.fontSize = settings.fontSize + 'px';
     measureDiv.style.lineHeight = String(settings.lineHeight);
