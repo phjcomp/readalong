@@ -44,6 +44,7 @@
   const seekBar = $('seekBar');
   const timeDisplay = $('timeDisplay');
   const progressPercent = $('progressPercent');
+  const speedBtn = $('speedBtn');
   const progressBarFill = $('progressBarFill');
   const progressBarContainer = $('progressBarContainer');
   const settingsPanel = $('settingsPanel');
@@ -77,8 +78,11 @@
     fontSize: 20, lineHeight: 1.8, margin: 60,
     fontFamily: "'Inter', system-ui, sans-serif",
     pauseAfterSentence: false, autoTurnLong: true,
-    highlightColor: 'yellow'
+    highlightColor: 'yellow',
+    playbackSpeed: 1.0
   };
+
+  const SPEED_OPTIONS = [0.5, 0.75, 0.9, 1.0, 1.1, 1.25, 1.5, 2.0];
 
   const HIGHLIGHT_COLORS = {
     yellow: { bg: 'rgba(255, 255, 0, 0.45)', border: 'rgba(200, 200, 0, 0.7)' },
@@ -177,6 +181,7 @@
     if (ds.margin) settings.margin = ds.margin;
     if (ds.fontFamily) settings.fontFamily = ds.fontFamily;
     if (ds.highlightColor) settings.highlightColor = ds.highlightColor;
+    if (ds.playbackSpeed) settings.playbackSpeed = ds.playbackSpeed;
     applySettings();
   }
 
@@ -351,6 +356,7 @@
       if (ds.highlightColor) settings.highlightColor = ds.highlightColor;
       if (ds.pauseAfterSentence !== undefined) settings.pauseAfterSentence = ds.pauseAfterSentence;
       if (ds.autoTurnLong !== undefined) settings.autoTurnLong = ds.autoTurnLong;
+      if (ds.playbackSpeed) settings.playbackSpeed = ds.playbackSpeed;
       applySettings();
 
       // Set audio source (streams from Cloudinary)
@@ -680,6 +686,16 @@
   audioEl.addEventListener('play', updatePlayPauseBtn);
   audioEl.addEventListener('pause', updatePlayPauseBtn);
 
+  /* Speed control */
+  speedBtn.addEventListener('click', () => {
+    const curIdx = SPEED_OPTIONS.indexOf(settings.playbackSpeed);
+    const nextIdx = (curIdx + 1) % SPEED_OPTIONS.length;
+    settings.playbackSpeed = SPEED_OPTIONS[nextIdx];
+    audioEl.playbackRate = settings.playbackSpeed;
+    speedBtn.textContent = settings.playbackSpeed + '×';
+    saveDeviceSettings();
+  });
+
   seekBar.addEventListener('input', () => {
     isSeeking = true;
     const ratio = seekBar.value / 1000;
@@ -781,6 +797,8 @@
     highlightColorSelect.value = settings.highlightColor;
     togglePauseAfter.classList.toggle('on', settings.pauseAfterSentence);
     toggleAutoTurnLong.classList.toggle('on', settings.autoTurnLong);
+    audioEl.playbackRate = settings.playbackSpeed;
+    speedBtn.textContent = settings.playbackSpeed + '×';
   }
 
   function onSettingChange() {
@@ -828,7 +846,8 @@
       fontFamily: settings.fontFamily,
       highlightColor: settings.highlightColor,
       pauseAfterSentence: settings.pauseAfterSentence,
-      autoTurnLong: settings.autoTurnLong
+      autoTurnLong: settings.autoTurnLong,
+      playbackSpeed: settings.playbackSpeed
     });
   }
 

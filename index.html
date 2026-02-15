@@ -599,6 +599,29 @@
       gap: 14px;
     }
 
+    #speedBtn {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      font-size: 12px;
+      font-weight: 600;
+      font-family: var(--font-ui);
+      padding: 4px 10px;
+      border-radius: 14px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all var(--transition);
+      font-variant-numeric: tabular-nums;
+      min-width: 48px;
+      text-align: center;
+    }
+
+    #speedBtn:hover {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+
     .playBtn {
       width: 40px;
       height: 40px;
@@ -1072,6 +1095,7 @@
       <button class="playBtn" id="playPauseBtn" title="Play / Pause (Space)">▶</button>
       <input type="range" id="seekBar" min="0" max="1000" value="0">
       <span id="timeDisplay">0:00 / 0:00</span>
+      <button id="speedBtn" title="Playback speed">1.0×</button>
       <span id="progressPercent">0.0%</span>
     </div>
   </div>
