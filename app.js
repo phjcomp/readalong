@@ -82,7 +82,7 @@
     playbackSpeed: 1.0
   };
 
-  const SPEED_OPTIONS = [0.75, 1.0];
+  const SPEED_OPTIONS = [0.85, 1.0, 1.1];
 
   const HIGHLIGHT_COLORS = {
     yellow: { bg: 'rgba(255, 255, 0, 0.45)', border: 'rgba(200, 200, 0, 0.7)' },
@@ -494,6 +494,16 @@
     return parts;
   }
 
+  /* Helper: split text on sentence boundaries and append with <br> between sentences */
+  function appendSentenceLines(span, text) {
+    // Split after sentence-ending punctuation followed by a space
+    const parts = text.split(/(?<=[.!?])\s+/);
+    parts.forEach((part, i) => {
+      if (i > 0) span.appendChild(document.createElement('br'));
+      span.appendChild(document.createTextNode(part));
+    });
+  }
+
   /* ═══ PAGE RENDERING ═══ */
   function renderCurrentPage() {
     if (pages.length === 0) { pageContent.innerHTML = ''; pageInfo.textContent = ''; return; }
@@ -545,14 +555,15 @@
         const span = document.createElement('span');
         span.className = 'srt-text';
         span.dataset.blockIdx = group.blockIndices[0];
-        span.textContent = item.partialText;
+        appendSentenceLines(span, item.partialText);
         div.appendChild(span);
       } else {
         group.blockIndices.forEach((blockIdx, i) => {
           const span = document.createElement('span');
           span.className = 'srt-text';
           span.dataset.blockIdx = blockIdx;
-          span.textContent = (i > 0 ? ' ' : '') + srtBlocks[blockIdx].text;
+          const txt = (i > 0 ? ' ' : '') + srtBlocks[blockIdx].text;
+          appendSentenceLines(span, txt);
           div.appendChild(span);
         });
       }
