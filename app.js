@@ -82,7 +82,7 @@
     playbackSpeed: 1.0
   };
 
-  const SPEED_OPTIONS = [0.5, 0.75, 0.9, 1.0, 1.1, 1.25, 1.5, 2.0];
+  const SPEED_OPTIONS = [0.75, 1.0];
 
   const HIGHLIGHT_COLORS = {
     yellow: { bg: 'rgba(255, 255, 0, 0.45)', border: 'rgba(200, 200, 0, 0.7)' },
