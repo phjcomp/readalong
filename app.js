@@ -59,6 +59,8 @@
   const marginVal = $('marginVal');
   const togglePauseAfter = $('togglePauseAfter');
   const toggleAutoTurnLong = $('toggleAutoTurnLong');
+  const syncOffsetSlider = $('syncOffsetSlider');
+  const syncOffsetVal = $('syncOffsetVal');
   const measureDiv = $('measureDiv');
 
   /* ─── State ─── */
@@ -79,7 +81,8 @@
     fontFamily: "'Inter', system-ui, sans-serif",
     pauseAfterSentence: false, autoTurnLong: true,
     highlightColor: 'yellow',
-    playbackSpeed: 1.0
+    playbackSpeed: 1.0,
+    syncOffset: 0.0
   };
 
   const SPEED_OPTIONS = [0.85, 1.0, 1.1];
@@ -182,6 +185,7 @@
     if (ds.fontFamily) settings.fontFamily = ds.fontFamily;
     if (ds.highlightColor) settings.highlightColor = ds.highlightColor;
     if (ds.playbackSpeed) settings.playbackSpeed = ds.playbackSpeed;
+    if (ds.syncOffset !== undefined) settings.syncOffset = ds.syncOffset;
     applySettings();
   }
 
@@ -357,6 +361,7 @@
       if (ds.pauseAfterSentence !== undefined) settings.pauseAfterSentence = ds.pauseAfterSentence;
       if (ds.autoTurnLong !== undefined) settings.autoTurnLong = ds.autoTurnLong;
       if (ds.playbackSpeed) settings.playbackSpeed = ds.playbackSpeed;
+      if (ds.syncOffset !== undefined) settings.syncOffset = ds.syncOffset;
       applySettings();
 
       // Set audio source (streams from Cloudinary)
@@ -658,7 +663,7 @@
 
   function syncLoop() {
     if (!audioEl.paused && !isSeeking) {
-      const time = audioEl.currentTime;
+      const time = audioEl.currentTime + settings.syncOffset;
       const blockIdx = findActiveBlockIndex(time);
       if (blockIdx >= 0) {
         const targetPage = findPageForBlockWithSubpage(blockIdx, time);
@@ -714,7 +719,7 @@
   });
   seekBar.addEventListener('change', () => {
     isSeeking = false;
-    const targetPage = findPageForTime(audioEl.currentTime);
+    const targetPage = findPageForTime(audioEl.currentTime + settings.syncOffset);
     if (targetPage !== currentPage) { currentPage = targetPage; renderCurrentPage(); }
     updateProgressDisplay();
   });
@@ -724,7 +729,7 @@
     const rect = progressBarContainer.getBoundingClientRect();
     const ratio = (e.clientX - rect.left) / rect.width;
     audioEl.currentTime = ratio * audioEl.duration;
-    const targetPage = findPageForTime(audioEl.currentTime);
+    const targetPage = findPageForTime(audioEl.currentTime + settings.syncOffset);
     if (targetPage !== currentPage) { currentPage = targetPage; renderCurrentPage(); }
     updateProgressDisplay();
   });
@@ -752,7 +757,7 @@
   /* ═══ SENTENCE NAVIGATION ═══ */
   function jumpToBlock(blockIdx) {
     if (blockIdx < 0 || blockIdx >= srtBlocks.length) return;
-    audioEl.currentTime = srtBlocks[blockIdx].startTime;
+    audioEl.currentTime = Math.max(0, srtBlocks[blockIdx].startTime - settings.syncOffset);
     pauseGuardTime = 0;
     const targetPage = findPageForBlock(blockIdx);
     if (targetPage !== currentPage) { currentPage = targetPage; renderCurrentPage(); }
@@ -761,15 +766,15 @@
     updateProgressDisplay();
   }
   function prevSentence() {
-    const idx = findActiveBlockIndex(audioEl.currentTime);
+    const idx = findActiveBlockIndex(audioEl.currentTime + settings.syncOffset);
     if (idx > 0) jumpToBlock(idx - 1); else if (idx === 0) jumpToBlock(0);
   }
   function currentSentenceRepeat() {
-    const idx = findActiveBlockIndex(audioEl.currentTime);
+    const idx = findActiveBlockIndex(audioEl.currentTime + settings.syncOffset);
     if (idx >= 0) jumpToBlock(idx);
   }
   function nextSentence() {
-    const idx = findActiveBlockIndex(audioEl.currentTime);
+    const idx = findActiveBlockIndex(audioEl.currentTime + settings.syncOffset);
     if (idx < srtBlocks.length - 1) jumpToBlock(idx + 1);
   }
 
@@ -810,6 +815,10 @@
     toggleAutoTurnLong.classList.toggle('on', settings.autoTurnLong);
     audioEl.playbackRate = settings.playbackSpeed;
     speedBtn.textContent = settings.playbackSpeed + '×';
+    if (syncOffsetSlider) {
+      syncOffsetSlider.value = settings.syncOffset;
+      syncOffsetVal.textContent = (settings.syncOffset > 0 ? '+' : '') + settings.syncOffset.toFixed(1) + 's';
+    }
   }
 
   function onSettingChange() {
@@ -818,9 +827,11 @@
     settings.margin = parseInt(marginSlider.value, 10);
     settings.fontFamily = fontFamilySelect.value;
     settings.highlightColor = highlightColorSelect.value;
+    if (syncOffsetSlider) settings.syncOffset = parseFloat(syncOffsetSlider.value) || 0;
     fontSizeVal.textContent = settings.fontSize + 'px';
     lineHeightVal.textContent = settings.lineHeight.toFixed(1);
     marginVal.textContent = settings.margin + 'px';
+    if (syncOffsetVal) syncOffsetVal.textContent = (settings.syncOffset > 0 ? '+' : '') + settings.syncOffset.toFixed(1) + 's';
     applySettings();
     if (srtBlocks.length > 0) {
       const currentBlockIdx = pages[currentPage] ? pages[currentPage][0].blockIdx : 0;
@@ -836,6 +847,7 @@
   marginSlider.addEventListener('input', onSettingChange);
   fontFamilySelect.addEventListener('change', onSettingChange);
   highlightColorSelect.addEventListener('change', onSettingChange);
+  if (syncOffsetSlider) syncOffsetSlider.addEventListener('input', onSettingChange);
 
   togglePauseAfter.addEventListener('click', () => {
     settings.pauseAfterSentence = !settings.pauseAfterSentence;
@@ -858,7 +870,8 @@
       highlightColor: settings.highlightColor,
       pauseAfterSentence: settings.pauseAfterSentence,
       autoTurnLong: settings.autoTurnLong,
-      playbackSpeed: settings.playbackSpeed
+      playbackSpeed: settings.playbackSpeed,
+      syncOffset: settings.syncOffset
     });
   }
 
